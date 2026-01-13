@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, LogOut, Settings, Trash2, Edit, Plus } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import StudentsManagement from "@/components/StudentsManagement";
 
 export default function AdminDashboard() {
   const [, navigate] = useLocation();
@@ -177,20 +178,7 @@ export default function AdminDashboard() {
             </TabsContent>
 
             <TabsContent value="students">
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <CardTitle>Gerenciar Estudantes</CardTitle>
-                    <Button className="gap-2">
-                      <Plus size={20} />
-                      Novo Estudante
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Funcionalidade em desenvolvimento...</p>
-                </CardContent>
-              </Card>
+              <StudentsManagement />
             </TabsContent>
 
             <TabsContent value="moderation">

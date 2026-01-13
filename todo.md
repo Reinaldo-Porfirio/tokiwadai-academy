@@ -23,6 +23,18 @@
 - [ ] Edição de perfil (foto, bio, senha)
 - [x] Bio com limite de 500 caracteres (implementado no schema)
 
+## Gerenciamento de Estudantes (Admin)
+- [x] Tabela com lista de estudantes
+- [x] Busca por nome/ID/email
+- [x] Filtro por série/distrito/status
+- [x] Botão para criar novo estudante
+- [x] Botão para editar estudante
+- [x] Botão para deletar estudante
+- [x] Botão para suspender/ativar estudante
+- [x] Modal/formulário de criação
+- [x] Modal/formulário de edição
+- [x] Confirmação de deleção
+
 ## Mirror (Rede Social)
 - [ ] Feed cronológico reverso com posts
 - [ ] Criar posts com texto (máx 500 chars) + imagem opcional

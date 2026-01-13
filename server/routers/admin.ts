@@ -296,6 +296,35 @@ export const adminRouter = router({
     }),
 
   /**
+   * List all students (admin only)
+   */
+  listStudents: publicProcedure
+    .input(z.object({ adminId: z.number() }))
+    .query(async ({ input }) => {
+      // Verify admin exists
+      const admin = await db.getAdminById(input.adminId);
+      if (!admin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only admins can view students",
+        });
+      }
+
+      const students = await db.getAllStudents();
+      return students.map((student) => ({
+        id: student.id,
+        studentId: student.studentId,
+        fullName: student.fullName,
+        username: student.username,
+        email: student.email,
+        grade: student.grade,
+        district: student.district,
+        status: student.isSuspended ? "suspended" : "active",
+        createdAt: student.createdAt,
+      }));
+    }),
+
+  /**
    * Get dashboard statistics
    */
   getDashboardStats: publicProcedure

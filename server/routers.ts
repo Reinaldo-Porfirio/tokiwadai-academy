@@ -8,16 +8,18 @@ import { mirrorRouter } from "./routers/mirror";
 import { messagesRouter } from "./routers/messages";
 import { academicRouter } from "./routers/academic";
 import { adminRouter } from "./routers/admin";
+import { mirrorAdminRouter } from "./routers/mirror-admin";
 import { notificationsRouter } from "./routers/notifications";
 // CORREÇÃO AQUI: Importamos a variável 'studentRouter' do arquivo correto
 import { studentRouter } from "./routers/studentRouter"; 
 
 export const appRouter = router({
-  student: studentRouter, // Agora ele vai reconhecer essa variável
+  student: studentRouter,
   system: systemRouter,
   auth: authRouter,
   students: studentsRouter,
   mirror: mirrorRouter,
+  mirrorAdmin: mirrorAdminRouter,
   messages: messagesRouter,
   academic: academicRouter,
   admin: adminRouter,

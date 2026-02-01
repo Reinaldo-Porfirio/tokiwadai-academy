@@ -278,6 +278,23 @@ export async function deletePost(id: number) {
   return await db.delete(posts).where(eq(posts.id, id));
 }
 
+export async function updatePost(id: number, data: Partial<InsertPost>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db.update(posts).set(data).where(eq(posts.id, id));
+}
+
+export async function getLikesByPostId(postId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(likes)
+    .where(eq(likes.postId, postId));
+}
+
 // ============================================================================
 // LIKES
 // ============================================================================
@@ -313,6 +330,13 @@ export async function getLikeByPostAndStudent(postId: number, studentId: number)
     .limit(1);
 
   return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getAllLikes() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(likes);
 }
 
 // ============================================================================

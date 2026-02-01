@@ -11,6 +11,7 @@ import StudentDashboard from "./pages/StudentDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import MirrorPage from "./pages/MirrorPage";
 import MessagesPage from "./pages/MessagesPage";
+import AdminMirrorPage from "./pages/AdminMirrorPage";
 
 function Router() {
   return (
@@ -22,6 +23,7 @@ function Router() {
       <Route path={"/dashboard/admin"} component={AdminDashboard} />
       <Route path={"/mirror"} component={MirrorPage} />
       <Route path={"/messages"} component={MessagesPage} />
+      <Route path={"/admin/mirror"} component={AdminMirrorPage} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

@@ -205,6 +205,7 @@ function ChatWindow({
     sendMessageMutation.mutate({
       conversationId: conversation.id,
       senderId: studentId,
+      receiverId: receiverId,
       content: newMessage,
     });
   };

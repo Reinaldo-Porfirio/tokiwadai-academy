@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, LogOut, Settings, Trash2, Edit, Plus, Search, UserX, UserCheck } from "lucide-react";
+import { Users, LogOut, Settings, Trash2, Edit, Plus, Search, UserX, UserCheck, Zap } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Input } from "@/components/ui/input";
 // IMPORTANTE: Verifique se você tem esses componentes de Dialog instalados
@@ -91,6 +91,7 @@ export default function AdminDashboard() {
         <nav className="space-y-4">
           <button onClick={() => setActiveTab("dashboard")} className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition ${activeTab === "dashboard" ? "bg-red-800" : "hover:bg-red-800"}`}><Settings size={20} /><span>Dashboard</span></button>
           <button onClick={() => setActiveTab("students")} className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition ${activeTab === "students" ? "bg-red-800" : "hover:bg-red-800"}`}><Users size={20} /><span>Gerenciar Estudantes</span></button>
+          <button onClick={() => navigate("/admin/mirror")} className="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-red-800 transition"><Zap size={20} /><span>Gerenciar Mirror</span></button>
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-red-800 transition mt-8"><LogOut size={20} /><span>Sair</span></button>
         </nav>
       </div>

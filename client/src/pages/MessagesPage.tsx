@@ -7,30 +7,35 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
-interface Conversation {
-  id: number;
-  participant1Id: number;
-  participant2Id: number;
-  participantName?: string;
-  lastMessage?: string;
-  lastMessageAt?: Date;
-  unreadCount?: number;
+interface ConversationData {
+  senderId: number;
+  sender?: {
+    id: number;
+    fullName: string;
+    studentId: string;
+    profilePicture?: string;
+  };
+  unreadCount: number;
 }
 
 interface Message {
   id: number;
-  conversationId: number;
   senderId: number;
+  receiverId: number;
   content: string;
   isRead: boolean;
   createdAt: Date;
-  senderName?: string;
+  sender?: {
+    id: number;
+    fullName: string;
+    studentId: string;
+  };
 }
 
 export default function MessagesPage() {
   const [, navigate] = useLocation();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [conversations, setConversations] = useState<ConversationData[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<ConversationData | null>(null);
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [user, setUser] = useState<any>(null);
 
@@ -43,7 +48,7 @@ export default function MessagesPage() {
     setUser(JSON.parse(storedUser));
   }, [navigate]);
 
-  const conversationsQuery = trpc.messages.getConversations.useQuery(
+  const conversationsQuery = trpc.messages.getConversationList.useQuery(
     { studentId: user?.id },
     { enabled: !!user?.id, refetchInterval: 3000 }
   );
@@ -90,23 +95,23 @@ export default function MessagesPage() {
             ) : (
               conversations.map((conv) => (
                 <div
-                  key={conv.id}
+                  key={conv.senderId}
                   onClick={() => setSelectedConversation(conv)}
                   className={`p-3 rounded-lg cursor-pointer transition ${
-                    selectedConversation?.id === conv.id
+                    selectedConversation?.senderId === conv.senderId
                       ? "bg-blue-100 border-2 border-blue-500"
                       : "bg-gray-50 hover:bg-gray-100"
                   }`}
                 >
                   <div className="flex justify-between items-start">
-                    <p className="font-semibold text-sm">{conv.participantName}</p>
-                    {conv.unreadCount && conv.unreadCount > 0 && (
+                    <p className="font-semibold text-sm">{conv.sender?.fullName}</p>
+                    {conv.unreadCount > 0 && (
                       <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
                         {conv.unreadCount}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-gray-600 truncate">{conv.lastMessage}</p>
+                  <p className="text-xs text-gray-600">{conv.sender?.studentId}</p>
                 </div>
               ))
             )}
@@ -118,7 +123,7 @@ export default function MessagesPage() {
           {selectedConversation ? (
             <ChatWindow
               conversation={selectedConversation}
-              studentId={user.id}
+              currentStudentId={user.id}
               onMessageSent={() => conversationsQuery.refetch()}
             />
           ) : showNewConversation ? (
@@ -152,20 +157,20 @@ export default function MessagesPage() {
 
 function ChatWindow({
   conversation,
-  studentId,
+  currentStudentId,
   onMessageSent,
 }: {
-  conversation: Conversation;
-  studentId: number;
+  conversation: ConversationData;
+  currentStudentId: number;
   onMessageSent?: () => void;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const messagesQuery = trpc.messages.getMessages.useQuery(
-    { conversationId: conversation.id },
-    { enabled: !!conversation.id, refetchInterval: 2000 }
+  const messagesQuery = trpc.messages.getConversation.useQuery(
+    { studentId1: currentStudentId, studentId2: conversation.senderId },
+    { enabled: !!conversation.senderId, refetchInterval: 2000 }
   );
 
   const sendMessageMutation = trpc.messages.sendMessage.useMutation({
@@ -185,7 +190,7 @@ function ChatWindow({
     if (messagesQuery.data) {
       setMessages(messagesQuery.data);
       messagesQuery.data.forEach((msg: Message) => {
-        if (!msg.isRead && msg.senderId !== studentId) {
+        if (!msg.isRead && msg.senderId !== currentStudentId) {
           markAsReadMutation.mutate({ messageId: msg.id });
         }
       });
@@ -203,8 +208,8 @@ function ChatWindow({
     }
 
     sendMessageMutation.mutate({
-      conversationId: conversation.id,
-      senderId: studentId,
+      senderId: currentStudentId,
+      receiverId: conversation.senderId,
       content: newMessage,
     });
   };
@@ -212,7 +217,7 @@ function ChatWindow({
   return (
     <>
       <CardHeader className="border-b">
-        <CardTitle>{conversation.participantName || "Conversa"}</CardTitle>
+        <CardTitle>{conversation.sender?.fullName || "Conversa"}</CardTitle>
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col overflow-hidden">
@@ -224,12 +229,12 @@ function ChatWindow({
               <div
                 key={message.id}
                 className={`flex ${
-                  message.senderId === studentId ? "justify-end" : "justify-start"
+                  message.senderId === currentStudentId ? "justify-end" : "justify-start"
                 }`}
               >
                 <div
                   className={`max-w-xs px-4 py-2 rounded-lg ${
-                    message.senderId === studentId
+                    message.senderId === currentStudentId
                       ? "bg-blue-500 text-white rounded-br-none"
                       : "bg-white text-gray-900 rounded-bl-none border"
                   }`}
@@ -237,7 +242,7 @@ function ChatWindow({
                   <p className="text-sm">{message.content}</p>
                   <p
                     className={`text-xs mt-1 ${
-                      message.senderId === studentId
+                      message.senderId === currentStudentId
                         ? "text-blue-100"
                         : "text-gray-500"
                     }`}
@@ -285,7 +290,7 @@ function NewConversationForm({
   onCancel,
 }: {
   studentId: number;
-  onConversationCreated: (conv: Conversation) => void;
+  onConversationCreated: (conv: ConversationData) => void;
   onCancel: () => void;
 }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -296,26 +301,26 @@ function NewConversationForm({
     { enabled: searchTerm.length > 0 }
   );
 
-  const createConversationMutation = trpc.messages.createConversation.useMutation({
-    onSuccess: (data) => {
-      toast.success("Conversa iniciada!");
-      onConversationCreated(data);
-    },
-    onError: (error: any) => {
-      toast.error(`Erro: ${error.message}`);
-    },
-  });
-
   const handleStartConversation = () => {
     if (!selectedStudent) {
       toast.error("Selecione um estudante");
       return;
     }
 
-    createConversationMutation.mutate({
-      participant1Id: studentId,
-      participant2Id: selectedStudent.id,
-    });
+    // Create conversation data
+    const conversation: ConversationData = {
+      senderId: selectedStudent.id,
+      sender: {
+        id: selectedStudent.id,
+        fullName: selectedStudent.fullName,
+        studentId: selectedStudent.studentId,
+        profilePicture: selectedStudent.profilePicture,
+      },
+      unreadCount: 0,
+    };
+
+    toast.success("Conversa iniciada!");
+    onConversationCreated(conversation);
   };
 
   return (
@@ -371,10 +376,10 @@ function NewConversationForm({
           </Button>
           <Button
             onClick={handleStartConversation}
-            disabled={!selectedStudent || createConversationMutation.isPending}
+            disabled={!selectedStudent}
             className="flex-1"
           >
-            {createConversationMutation.isPending ? "Iniciando..." : "Iniciar"}
+            Iniciar
           </Button>
         </div>
       </CardContent>

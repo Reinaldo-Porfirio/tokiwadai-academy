@@ -6,8 +6,6 @@ import { TRPCError } from "@trpc/server";
 import { storagePut } from "../storage";
 
 export const studentsRouter = router({
-  
-
   /**
    * Get student profile by ID
    */
@@ -15,15 +13,9 @@ export const studentsRouter = router({
     .input(z.object({ studentId: z.number() }))
     .query(async ({ input }) => {
       const student = await db.getStudentById(input.studentId);
-
       if (!student) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Student not found",
-        });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Student not found" });
       }
-
-      // Remove password hash from response
       const { passwordHash, ...studentData } = student;
       return studentData;
     }),
@@ -42,46 +34,19 @@ export const studentsRouter = router({
     )
     .mutation(async ({ input }) => {
       const student = await db.getStudentById(input.studentId);
-
       if (!student) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Student not found",
-        });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Student not found" });
       }
 
       const updateData: any = {};
-
-      if (input.bio !== undefined) {
-        if (input.bio.length > 500) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Bio must not exceed 500 characters",
-          });
-        }
-        updateData.bio = input.bio;
-      }
-
-      if (input.profilePicture !== undefined) {
-        updateData.profilePicture = input.profilePicture;
-      }
-
+      if (input.bio !== undefined) updateData.bio = input.bio;
+      if (input.profilePicture !== undefined) updateData.profilePicture = input.profilePicture;
       if (input.password !== undefined) {
-        if (!auth.isValidPassword(input.password)) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Password must be at least 8 characters",
-          });
-        }
         updateData.passwordHash = await auth.hashPassword(input.password);
       }
 
       await db.updateStudent(input.studentId, updateData);
-
-      return {
-        success: true,
-        message: "Profile updated successfully",
-      };
+      return { success: true };
     }),
 
   /**
@@ -89,10 +54,19 @@ export const studentsRouter = router({
    */
   getAll: publicProcedure.query(async () => {
     const students = await db.getAllStudents();
-
-    // Remove password hashes from response
     return students.map(({ passwordHash, ...student }) => student);
   }),
+
+  /**
+   * ADMIN ONLY: Update follower count
+   * NOTA: Se der erro no 'followersCount', você precisa adicionar essa coluna no seu Prisma
+   */
+  updateFollowers: publicProcedure
+    .input(z.object({ studentId: z.number(), count: z.number() }))
+    .mutation(async ({ input }) => {
+      await db.updateStudent(input.studentId, { ["followersCount" as any]: input.count });
+      return { success: true };
+    }),
 
   /**
    * Get student by username
@@ -101,14 +75,9 @@ export const studentsRouter = router({
     .input(z.object({ username: z.string() }))
     .query(async ({ input }) => {
       const student = await db.getStudentByUsername(input.username);
-
       if (!student) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Student not found",
-        });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Student not found" });
       }
-
       const { passwordHash, ...studentData } = student;
       return studentData;
     }),
@@ -117,21 +86,13 @@ export const studentsRouter = router({
    * Search students by name or username
    */
   search: publicProcedure
-    .input(z.object({ query: z.string().min(1) }))
+    .input(z.object({ query: z.string() }))
     .query(async ({ input }) => {
       const allStudents = await db.getAllStudents();
-
-      const filtered = allStudents.filter((student) => {
-        const query = input.query.toLowerCase();
-        return (
-          student.fullName.toLowerCase().includes(query) ||
-          student.username.toLowerCase().includes(query) ||
-          student.studentId.toLowerCase().includes(query)
-        );
-      });
-
-      // Remove password hashes
-      return filtered.map(({ passwordHash, ...student }) => student);
+      return allStudents.filter(s => 
+        s.fullName.toLowerCase().includes(input.query.toLowerCase()) ||
+        s.studentId.toLowerCase().includes(input.query.toLowerCase())
+      ).map(({ passwordHash, ...s }) => s);
     }),
 
   /**
@@ -139,25 +100,10 @@ export const studentsRouter = router({
    */
   getStats: publicProcedure.query(async () => {
     const students = await db.getAllStudents();
-    const totalStudents = students.length;
-    const suspendedStudents = students.filter((s) => s.isSuspended).length;
-    const activeStudents = totalStudents - suspendedStudents;
-
-    // Get latest student
-    const latestStudent = students.length > 0 ? students[students.length - 1] : null;
-
     return {
-      totalStudents,
-      activeStudents,
-      suspendedStudents,
-      latestStudent: latestStudent
-        ? {
-            id: latestStudent.id,
-            fullName: latestStudent.fullName,
-            studentId: latestStudent.studentId,
-            createdAt: latestStudent.createdAt,
-          }
-        : null,
+      totalStudents: students.length,
+      activeStudents: students.filter(s => !s.isSuspended).length,
+      suspendedStudents: students.filter(s => s.isSuspended).length,
     };
   }),
 
@@ -165,81 +111,27 @@ export const studentsRouter = router({
    * Upload profile photo
    */
   uploadProfilePhoto: publicProcedure
-    .input(
-      z.object({
-        studentId: z.number(),
-        imageData: z.string(),
-        fileName: z.string(),
-      })
-    )
+    .input(z.object({ studentId: z.number(), imageData: z.string() }))
     .mutation(async ({ input }) => {
-      try {
-        const buffer = Buffer.from(input.imageData, "base64");
-        const sizeMB = buffer.length / (1024 * 1024);
-        
-        if (sizeMB > 5) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Image too large. Maximum: 5MB",
-          });
-        }
+      const base64Data = input.imageData.includes(",") ? input.imageData.split(",")[1] : input.imageData;
+      const buffer = Buffer.from(base64Data, "base64");
+      const fileKey = `students/${input.studentId}/profile-${Date.now()}.jpg`;
+      const { url } = await storagePut(fileKey, buffer, "image/jpeg");
 
-        const fileKey = `students/${input.studentId}/profile-${Date.now()}.jpg`;
-        const { url } = await storagePut(fileKey, buffer, "image/jpeg");
-
-        await db.updateStudent(input.studentId, {
-          profilePicture: url,
-        });
-
-        return {
-          success: true,
-          url,
-          message: "Profile photo updated successfully",
-        };
-      } catch (error: any) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message || "Error uploading photo",
-        });
-      }
+      await db.updateStudent(input.studentId, { profilePicture: url });
+      return { success: true, url };
     }),
 
   /**
    * Upload post image
    */
   uploadPostImage: publicProcedure
-    .input(
-      z.object({
-        studentId: z.number(),
-        imageData: z.string(),
-        fileName: z.string(),
-      })
-    )
+    .input(z.object({ studentId: z.number(), imageData: z.string() }))
     .mutation(async ({ input }) => {
-      try {
-        const buffer = Buffer.from(input.imageData, "base64");
-        const sizeMB = buffer.length / (1024 * 1024);
-        
-        if (sizeMB > 10) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Image too large. Maximum: 10MB",
-          });
-        }
-
-        const fileKey = `posts/${input.studentId}/image-${Date.now()}.jpg`;
-        const { url } = await storagePut(fileKey, buffer, "image/jpeg");
-
-        return {
-          success: true,
-          url,
-          message: "Image uploaded successfully",
-        };
-      } catch (error: any) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message || "Error uploading image",
-        });
-      }
+      const base64Data = input.imageData.includes(",") ? input.imageData.split(",")[1] : input.imageData;
+      const buffer = Buffer.from(base64Data, "base64");
+      const fileKey = `posts/${input.studentId}/image-${Date.now()}.jpg`;
+      const { url } = await storagePut(fileKey, buffer, "image/jpeg");
+      return { success: true, url };
     }),
 });

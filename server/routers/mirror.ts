@@ -7,6 +7,8 @@ export const mirrorRouter = router({
   /**
    * Create a new post
    */
+
+  
   createPost: publicProcedure
     .input(
       z.object({

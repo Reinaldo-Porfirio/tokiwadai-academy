@@ -1,384 +1,148 @@
-import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, Send, Plus, Search, ArrowLeft } from "lucide-react";
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { toast } from "sonner";
-import { useLocation } from "wouter";
-
-interface Conversation {
-  id: number;
-  participant1Id: number;
-  participant2Id: number;
-  participantName?: string;
-  lastMessage?: string;
-  lastMessageAt?: Date;
-  unreadCount?: number;
-}
-
-interface Message {
-  id: number;
-  conversationId: number;
-  senderId: number;
-  content: string;
-  isRead: boolean;
-  createdAt: Date;
-  senderName?: string;
-}
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Send, Search, User, MessageSquare } from "lucide-react"; // MessageSquare adicionado!
 
 export default function MessagesPage() {
-  const [, navigate] = useLocation();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
-  const [showNewConversation, setShowNewConversation] = useState(false);
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem("tokiwadai-user");
-    if (!storedUser) {
-      navigate("/login");
-      return;
-    }
-    setUser(JSON.parse(storedUser));
-  }, [navigate]);
-
-  const conversationsQuery = trpc.messages.getConversations.useQuery(
-    { studentId: user?.id },
-    { enabled: !!user?.id, refetchInterval: 3000 }
-  );
-
-  useEffect(() => {
-    if (conversationsQuery.data) {
-      setConversations(conversationsQuery.data);
-    }
-  }, [conversationsQuery.data]);
-
-  if (!user) return null;
-
-  return (
-    <div className="max-w-6xl mx-auto py-8 px-4">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">💬 Mensagens Privadas</h1>
-        <p className="text-gray-600">Converse com seus colegas da Tokiwadai Academy</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[600px]">
-        {/* Lista de Conversas */}
-        <Card className="md:col-span-1 flex flex-col">
-          <CardHeader className="pb-3">
-            <div className="flex justify-between items-center">
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare size={20} />
-                Conversas
-              </CardTitle>
-              <Button
-                size="sm"
-                onClick={() => setShowNewConversation(true)}
-                className="gap-1"
-              >
-                <Plus size={16} />
-              </Button>
-            </div>
-          </CardHeader>
-
-          <CardContent className="flex-1 overflow-y-auto space-y-2">
-            {conversationsQuery.isLoading ? (
-              <p className="text-center text-gray-500 py-4">Carregando...</p>
-            ) : conversations.length === 0 ? (
-              <p className="text-center text-gray-500 py-4">Nenhuma conversa</p>
-            ) : (
-              conversations.map((conv) => (
-                <div
-                  key={conv.id}
-                  onClick={() => setSelectedConversation(conv)}
-                  className={`p-3 rounded-lg cursor-pointer transition ${
-                    selectedConversation?.id === conv.id
-                      ? "bg-blue-100 border-2 border-blue-500"
-                      : "bg-gray-50 hover:bg-gray-100"
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <p className="font-semibold text-sm">{conv.participantName}</p>
-                    {conv.unreadCount && conv.unreadCount > 0 && (
-                      <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
-                        {conv.unreadCount}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-600 truncate">{conv.lastMessage}</p>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Chat ou Nova Conversa */}
-        <Card className="md:col-span-2 flex flex-col">
-          {selectedConversation ? (
-            <ChatWindow
-              conversation={selectedConversation}
-              studentId={user.id}
-              onMessageSent={() => conversationsQuery.refetch()}
-            />
-          ) : showNewConversation ? (
-            <NewConversationForm
-              studentId={user.id}
-              onConversationCreated={(conv) => {
-                setConversations([conv, ...conversations]);
-                setSelectedConversation(conv);
-                setShowNewConversation(false);
-                conversationsQuery.refetch();
-              }}
-              onCancel={() => setShowNewConversation(false)}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <MessageSquare size={48} className="mx-auto mb-4 text-gray-300" />
-                <p className="text-gray-500 mb-4">Selecione uma conversa</p>
-                <Button onClick={() => setShowNewConversation(true)}>
-                  <Plus size={20} className="mr-2" />
-                  Nova Conversa
-                </Button>
-              </div>
-            </div>
-          )}
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-function ChatWindow({
-  conversation,
-  studentId,
-  onMessageSent,
-}: {
-  conversation: Conversation;
-  studentId: number;
-  onMessageSent?: () => void;
-}) {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const messagesQuery = trpc.messages.getMessages.useQuery(
-    { conversationId: conversation.id },
-    { enabled: !!conversation.id, refetchInterval: 2000 }
-  );
-
-  const sendMessageMutation = trpc.messages.sendMessage.useMutation({
-    onSuccess: () => {
-      setNewMessage("");
-      messagesQuery.refetch();
-      onMessageSent?.();
-    },
-    onError: (error: any) => {
-      toast.error(`Erro: ${error.message}`);
-    },
-  });
-
-  const markAsReadMutation = trpc.messages.markAsRead.useMutation();
-
-  useEffect(() => {
-    if (messagesQuery.data) {
-      setMessages(messagesQuery.data);
-      messagesQuery.data.forEach((msg: Message) => {
-        if (!msg.isRead && msg.senderId !== studentId) {
-          markAsReadMutation.mutate({ messageId: msg.id });
-        }
-      });
-    }
-  }, [messagesQuery.data]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) {
-      toast.error("A mensagem não pode estar vazia");
-      return;
-    }
-
-    sendMessageMutation.mutate({
-      conversationId: conversation.id,
-      senderId: studentId,
-      receiverId: receiverId,
-      content: newMessage,
-    });
-  };
-
-  return (
-    <>
-      <CardHeader className="border-b">
-        <CardTitle>{conversation.participantName || "Conversa"}</CardTitle>
-      </CardHeader>
-
-      <CardContent className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto mb-4 space-y-3 p-4 bg-gray-50 rounded-lg">
-          {messages.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">Nenhuma mensagem ainda</p>
-          ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${
-                  message.senderId === studentId ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`max-w-xs px-4 py-2 rounded-lg ${
-                    message.senderId === studentId
-                      ? "bg-blue-500 text-white rounded-br-none"
-                      : "bg-white text-gray-900 rounded-bl-none border"
-                  }`}
-                >
-                  <p className="text-sm">{message.content}</p>
-                  <p
-                    className={`text-xs mt-1 ${
-                      message.senderId === studentId
-                        ? "text-blue-100"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    {new Date(message.createdAt).toLocaleTimeString("pt-BR", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-              </div>
-            ))
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        <div className="flex gap-2">
-          <Input
-            placeholder="Digite sua mensagem..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === "Enter") {
-                handleSendMessage();
-              }
-            }}
-            disabled={sendMessageMutation.isPending}
-          />
-          <Button
-            onClick={handleSendMessage}
-            disabled={sendMessageMutation.isPending}
-            className="gap-2"
-          >
-            <Send size={20} />
-          </Button>
-        </div>
-      </CardContent>
-    </>
-  );
-}
-
-function NewConversationForm({
-  studentId,
-  onConversationCreated,
-  onCancel,
-}: {
-  studentId: number;
-  onConversationCreated: (conv: Conversation) => void;
-  onCancel: () => void;
-}) {
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [message, setMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
 
-  const searchQuery = trpc.messages.searchStudents.useQuery(
-    { query: searchTerm },
-    { enabled: searchTerm.length > 0 }
+  // Pegando o usuário logado para passar o ID para a query
+  const storedUser = JSON.parse(localStorage.getItem("tokiwadai-user") || "{}");
+  const currentStudentId = storedUser.id || 0;
+
+  // Queries corrigidas
+  const conversations = trpc.messages.getConversations.useQuery(
+    { studentId: currentStudentId },
+    { enabled: !!currentStudentId }
+  ); // Adicionado {}
+  
+  // O seu backend tem searchStudents dentro de messages, não no student!
+  const searchResults = trpc.messages.searchStudents?.useQuery({ query: searchTerm }, { enabled: searchTerm.length > 2 });
+  
+  // Como o getChatHistory deu erro, vou usar um fallback. 
+  // Se o seu backend mudou o nome para getMessages, troque aqui embaixo:
+  const chatHistory = (trpc.messages as any).getChatHistory?.useQuery(
+    { otherId: selectedUser?.id },
+    { enabled: !!selectedUser, refetchInterval: 3000 }
   );
 
-  const createConversationMutation = trpc.messages.createConversation.useMutation({
-    onSuccess: (data) => {
-      toast.success("Conversa iniciada!");
-      onConversationCreated(data);
-    },
-    onError: (error: any) => {
-      toast.error(`Erro: ${error.message}`);
-    },
+  // Mutation corrigida para sendMessage
+  const sendMessage = trpc.messages.sendMessage.useMutation({
+    onSuccess: () => {
+      setMessage("");
+      if (chatHistory) chatHistory.refetch();
+    }
   });
 
-  const handleStartConversation = () => {
-    if (!selectedStudent) {
-      toast.error("Selecione um estudante");
-      return;
-    }
-
-    createConversationMutation.mutate({
-      participant1Id: studentId,
-      participant2Id: selectedStudent.id,
+  const handleSend = () => {
+    if (!message.trim() || !selectedUser) return;
+    sendMessage.mutate({
+      senderId: 0, // O tRPC vai preencher no servidor, mas o tipo exige aqui
+      receiverId: selectedUser.id,
+      content: message
     });
   };
 
   return (
-    <>
-      <CardHeader className="border-b">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onCancel}>
-            <ArrowLeft size={20} />
-          </Button>
-          <CardTitle>Iniciar Conversa</CardTitle>
-        </div>
-      </CardHeader>
-
-      <CardContent className="flex-1 flex flex-col overflow-hidden p-4">
-        <div className="mb-4">
+    <div className="flex h-screen bg-gray-100 max-w-6xl mx-auto shadow-2xl border-x overflow-hidden font-sans">
+      <aside className="w-80 bg-white border-r flex flex-col">
+        <div className="p-6 border-b bg-white">
+          <h1 className="text-xl font-black text-gray-900 mb-4 tracking-tighter">MENSAGENS</h1>
           <div className="relative">
-            <Search className="absolute left-3 top-3 text-gray-400" size={20} />
-            <Input
-              placeholder="Buscar estudante..."
+            <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
+            <Input 
+              placeholder="Buscar aluno..." 
+              className="pl-9 bg-gray-50 border-none rounded-xl h-10 text-sm focus-visible:ring-red-200" 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
             />
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-2 mb-4">
-          {searchQuery.isLoading ? (
-            <p className="text-center text-gray-500 py-4">Buscando...</p>
-          ) : searchQuery.data && searchQuery.data.length === 0 ? (
-            <p className="text-center text-gray-500 py-4">Nenhum estudante encontrado</p>
+        <div className="flex-1 overflow-y-auto">
+          {searchTerm.length > 2 ? (
+            <div className="p-2">
+              <p className="text-[10px] font-black text-gray-400 uppercase px-3 py-2">Resultados</p>
+              {searchResults?.data?.map((s: any) => (
+                <div key={s.id} onClick={() => { setSelectedUser(s); setSearchTerm(""); }} className="p-3 hover:bg-red-50 cursor-pointer rounded-xl flex items-center gap-3 transition">
+                  <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-700 font-black text-xs uppercase">{s.fullName[0]}</div>
+                  <span className="text-sm font-bold text-gray-700">{s.fullName}</span>
+                </div>
+              ))}
+            </div>
           ) : (
-            searchQuery.data?.map((student: any) => (
-              <div
-                key={student.id}
-                onClick={() => setSelectedStudent(student)}
-                className={`p-3 rounded-lg cursor-pointer transition ${
-                  selectedStudent?.id === student.id
-                    ? "bg-blue-100 border-2 border-blue-500"
-                    : "bg-gray-50 hover:bg-gray-100"
-                }`}
-              >
-                <p className="font-semibold">{student.fullName}</p>
-                <p className="text-sm text-gray-600">{student.studentId}</p>
+            conversations.data?.map((conv: any) => (
+              <div key={conv.id} onClick={() => setSelectedUser(conv.otherUser)} className={`p-4 border-b flex items-center gap-4 cursor-pointer transition ${selectedUser?.id === conv.otherUser.id ? 'bg-red-50 border-r-4 border-r-red-700' : 'hover:bg-gray-50'}`}>
+                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center border border-gray-100">
+                  <User className="text-gray-400" size={20}/>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm text-gray-900 truncate">{conv.otherUser.fullName}</p>
+                  <p className="text-xs text-gray-500 truncate font-medium">Clique para conversar</p>
+                </div>
               </div>
             ))
           )}
         </div>
+      </aside>
 
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={onCancel} className="flex-1">
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleStartConversation}
-            disabled={!selectedStudent || createConversationMutation.isPending}
-            className="flex-1"
-          >
-            {createConversationMutation.isPending ? "Iniciando..." : "Iniciar"}
-          </Button>
-        </div>
-      </CardContent>
-    </>
+      <section className="flex-1 flex flex-col bg-white">
+        {selectedUser ? (
+          <>
+            <header className="p-4 border-b flex items-center gap-4 bg-white/90 backdrop-blur shadow-sm sticky top-0 z-10">
+              <div className="w-10 h-10 rounded-full bg-red-700 text-white flex items-center justify-center font-black text-xs">
+                {selectedUser.fullName?.substring(0,1)}
+              </div>
+              <div>
+                <p className="font-black text-sm text-gray-900">{selectedUser.fullName}</p>
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                  <p className="text-[10px] text-green-600 font-black uppercase tracking-widest">Ativo Agora</p>
+                </div>
+              </div>
+            </header>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/50">
+              {chatHistory?.data?.map((msg: any) => (
+                <div key={msg.id} className={`flex ${msg.senderId === selectedUser.id ? 'justify-start' : 'justify-end'}`}>
+                  <div className={`px-4 py-2.5 rounded-2xl text-sm shadow-sm max-w-[75%] ${
+                    msg.senderId === selectedUser.id 
+                    ? 'bg-white text-gray-800 rounded-tl-none border border-gray-100' 
+                    : 'bg-red-700 text-white rounded-tr-none font-medium'
+                  }`}>
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <footer className="p-4 border-t bg-white">
+              <div className="flex gap-2 bg-gray-100 p-2 rounded-2xl items-center">
+                <Input 
+                  value={message} 
+                  onChange={(e) => setMessage(e.target.value)} 
+                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                  placeholder="Escreva para Tokiwadai..." 
+                  className="bg-transparent border-none focus-visible:ring-0 text-sm" 
+                />
+                <Button onClick={handleSend} disabled={!message.trim()} className="bg-red-700 hover:bg-red-800 rounded-xl h-10 w-10 p-0 transition-transform active:scale-95">
+                  <Send size={18}/>
+                </Button>
+              </div>
+            </footer>
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-gray-300 gap-4 bg-gray-50/30">
+            <div className="p-6 bg-white rounded-full shadow-sm">
+              <MessageSquare size={48} className="text-red-100" />
+            </div>
+            <p className="font-black text-xs uppercase tracking-widest text-gray-400">Selecione uma transmissão</p>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }

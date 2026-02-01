@@ -67,6 +67,8 @@ export const studentsRouter = router({
       await db.updateStudent(input.studentId, { ["followersCount" as any]: input.count });
       return { success: true };
     }),
+    
+    
 
   /**
    * Get student by username

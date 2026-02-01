@@ -3,10 +3,10 @@ import { publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import * as auth from "../utils/auth";
 import { TRPCError } from "@trpc/server";
+import { storagePut } from "../storage";
 
 export const studentsRouter = router({
   
-
 
   /**
    * Get student profile by ID
@@ -160,4 +160,86 @@ export const studentsRouter = router({
         : null,
     };
   }),
+
+  /**
+   * Upload profile photo
+   */
+  uploadProfilePhoto: publicProcedure
+    .input(
+      z.object({
+        studentId: z.number(),
+        imageData: z.string(),
+        fileName: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        const buffer = Buffer.from(input.imageData, "base64");
+        const sizeMB = buffer.length / (1024 * 1024);
+        
+        if (sizeMB > 5) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Image too large. Maximum: 5MB",
+          });
+        }
+
+        const fileKey = `students/${input.studentId}/profile-${Date.now()}.jpg`;
+        const { url } = await storagePut(fileKey, buffer, "image/jpeg");
+
+        await db.updateStudent(input.studentId, {
+          profilePicture: url,
+        });
+
+        return {
+          success: true,
+          url,
+          message: "Profile photo updated successfully",
+        };
+      } catch (error: any) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message || "Error uploading photo",
+        });
+      }
+    }),
+
+  /**
+   * Upload post image
+   */
+  uploadPostImage: publicProcedure
+    .input(
+      z.object({
+        studentId: z.number(),
+        imageData: z.string(),
+        fileName: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        const buffer = Buffer.from(input.imageData, "base64");
+        const sizeMB = buffer.length / (1024 * 1024);
+        
+        if (sizeMB > 10) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Image too large. Maximum: 10MB",
+          });
+        }
+
+        const fileKey = `posts/${input.studentId}/image-${Date.now()}.jpg`;
+        const { url } = await storagePut(fileKey, buffer, "image/jpeg");
+
+        return {
+          success: true,
+          url,
+          message: "Image uploaded successfully",
+        };
+      } catch (error: any) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message || "Error uploading image",
+        });
+      }
+    }),
 });

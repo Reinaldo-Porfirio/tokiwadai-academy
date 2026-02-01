@@ -9,6 +9,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import StudentDashboard from "./pages/StudentDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import MirrorPage from "./pages/MirrorPage";
+import MessagesPage from "./pages/MessagesPage";
 
 function Router() {
   return (
@@ -18,6 +20,8 @@ function Router() {
       <Route path={"/register"} component={Register} />
       <Route path={"/dashboard/student"} component={StudentDashboard} />
       <Route path={"/dashboard/admin"} component={AdminDashboard} />
+      <Route path={"/mirror"} component={MirrorPage} />
+      <Route path={"/messages"} component={MessagesPage} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

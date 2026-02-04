@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, LogOut, MessageSquare, Calendar, Book, Map, Settings } from "lucide-react";
+import MirrorPage from "./MirrorPage";
+import MessagesPage from "./MessagesPage";
 
 export default function StudentDashboard() {
   const [, navigate] = useLocation();
@@ -167,25 +169,11 @@ export default function StudentDashboard() {
             </TabsContent>
 
             <TabsContent value="mirror">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Mirror - Rede Social</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Funcionalidade em desenvolvimento...</p>
-                </CardContent>
-              </Card>
+              <MirrorPage />
             </TabsContent>
 
             <TabsContent value="messages">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Mensagens Privadas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Funcionalidade em desenvolvimento...</p>
-                </CardContent>
-              </Card>
+              <MessagesPage />
             </TabsContent>
 
             <TabsContent value="calendar">

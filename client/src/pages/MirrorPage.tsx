@@ -22,8 +22,8 @@ export default function MirrorPage() {
     setUser(JSON.parse(storedUser));
   }, [navigate]);
 
-  // 2. Query ajustada: Usamos getPost com undefined para forçar a listagem total
-  const postsQuery = trpc.mirror.getPost.useQuery({ postId: undefined as any });
+  // 2. Query para obter feed de posts
+  const postsQuery = trpc.mirror.getFeed.useQuery({ limit: 50, offset: 0 }, { refetchInterval: 5000 });
 
   // 3. Mutation para criar posts
   const createPostMutation = trpc.mirror.createPost.useMutation({
@@ -45,12 +45,12 @@ export default function MirrorPage() {
   if (!user) return null;
 
   // Garante que posts seja sempre um array para o .map não quebrar
-  const posts = Array.isArray(postsQuery.data) ? postsQuery.data : [];
+  const posts = Array.isArray(postsQuery.data?.posts) ? postsQuery.data.posts : [];
 
   return (
-    <div className="max-w-2xl mx-auto p-4 space-y-6 bg-gray-50 min-h-screen">
+    <div className="w-full p-4 space-y-6 bg-gray-50 min-h-screen">
       {/* Barra de Hashtag (Visual apenas por enquanto) */}
-      <div className="flex items-center gap-2 bg-white p-3 rounded-lg shadow-sm border border-red-100">
+      {/* <div className="flex items-center gap-2 bg-white p-3 rounded-lg shadow-sm border border-red-100">
         <Hash className="text-red-700" size={20} />
         <Input 
           placeholder="Busca por hashtag desabilitada no momento..." 
@@ -59,10 +59,10 @@ export default function MirrorPage() {
           className="border-none focus-visible:ring-0"
           disabled
         />
-      </div>
+      </div> */
 
       {/* Card de Criação de Post */}
-      <Card className="border-red-200 shadow-md">
+      <Card className="border-red-200 shadow-md max-w-2xl mx-auto">
         <CardContent className="pt-4">
           <textarea 
             className="w-full min-h-[100px] p-3 rounded-md border focus:outline-red-500 resize-none text-sm"
@@ -83,7 +83,7 @@ export default function MirrorPage() {
       </Card>
 
       {/* Listagem de Posts (Feed) */}
-      <div className="space-y-4">
+      <div className="space-y-4 max-w-2xl mx-auto">
         {postsQuery.isLoading ? (
           <p className="text-center text-gray-500 py-10 italic">Conectando à rede da Cidade Acadêmica...</p>
         ) : posts.length > 0 ? (
@@ -118,7 +118,7 @@ function PostCard({ post, refetch, currentUserId }: { post: any, refetch: () => 
   const student = post.student;
 
   return (
-    <Card className="hover:border-red-300 transition-all shadow-sm bg-white">
+    <Card className="hover:border-red-300 transition-all shadow-sm bg-white max-w-2xl mx-auto">
       <CardHeader className="flex flex-row items-center gap-3 pb-2">
         <div className="w-10 h-10 rounded-full bg-red-700 flex items-center justify-center font-bold text-white shadow-inner">
           {student?.fullName?.[0] || "?"}
@@ -135,13 +135,13 @@ function PostCard({ post, refetch, currentUserId }: { post: any, refetch: () => 
         <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">{post.content}</p>
         
         {/* Barra de Ações */}
-        <div className="flex items-center gap-6 border-t pt-3 text-gray-500">
+        <div className="flex items-center gap-6 border-t pt-3 text-gray-500 text-sm">
           <button 
             onClick={() => likeMutation.mutate({ postId: post.id, studentId: currentUserId })}
             className={`flex items-center gap-1.5 hover:text-red-600 transition ${post.isLiked ? 'text-red-600' : ''}`}
           >
             <Heart size={18} fill={post.isLiked ? "currentColor" : "none"} />
-            <span className="text-xs font-bold">{post.likesCount || 0}</span>
+            <span className="text-xs font-bold">{post.likes?.length || 0}</span>
           </button>
           
           <button 

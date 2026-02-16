@@ -49,17 +49,7 @@ export default function MirrorPage() {
 
   return (
     <div className="w-full p-4 space-y-6 bg-gray-50 min-h-screen">
-      {/* Barra de Hashtag (Visual apenas por enquanto) */}
-      {/* <div className="flex items-center gap-2 bg-white p-3 rounded-lg shadow-sm border border-red-100">
-        <Hash className="text-red-700" size={20} />
-        <Input 
-          placeholder="Busca por hashtag desabilitada no momento..." 
-          value={hashtag}
-          onChange={(e) => setHashtag(e.target.value)}
-          className="border-none focus-visible:ring-0"
-          disabled
-        />
-      </div> */
+      {/* Barra de Hashtag desabilitada por enquanto */}
 
       {/* Card de Criação de Post */}
       <Card className="border-red-200 shadow-md max-w-2xl mx-auto">

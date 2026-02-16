@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, or, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -262,11 +262,11 @@ export async function getAllPosts(limit = 50, offset = 0) {
   const db = await getDb();
   if (!db) return [];
 
-  // Return posts in reverse chronological order
+  // Return posts in reverse chronological order (newest first)
   return await db
     .select()
     .from(posts)
-    .orderBy((p) => p.createdAt)
+    .orderBy(desc(posts.createdAt))
     .limit(limit)
     .offset(offset);
 }
@@ -389,8 +389,12 @@ export async function getMessagesBetweenStudents(
     .select()
     .from(messages)
     .where(
-      eq(messages.senderId, studentId1) && eq(messages.receiverId, studentId2)
-    );
+      or(
+        and(eq(messages.senderId, studentId1), eq(messages.receiverId, studentId2)),
+        and(eq(messages.senderId, studentId2), eq(messages.receiverId, studentId1))
+      )
+    )
+    .orderBy(desc(messages.createdAt));
 }
 
 export async function getUnreadMessages(studentId: number) {

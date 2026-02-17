@@ -164,6 +164,48 @@ export type Message = typeof messages.$inferSelect;
 export type InsertMessage = typeof messages.$inferInsert;
 
 /**
+ * Message groups (group chats)
+ */
+export const messageGroups = mysqlTable("message_groups", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  createdByStudentId: int("created_by_student_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+export type MessageGroup = typeof messageGroups.$inferSelect;
+export type InsertMessageGroup = typeof messageGroups.$inferInsert;
+
+/**
+ * Group members (students in a group)
+ */
+export const groupMembers = mysqlTable("group_members", {
+  id: int("id").autoincrement().primaryKey(),
+  groupId: int("group_id").notNull(),
+  studentId: int("student_id").notNull(),
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
+});
+
+export type GroupMember = typeof groupMembers.$inferSelect;
+export type InsertGroupMember = typeof groupMembers.$inferInsert;
+
+/**
+ * Group messages
+ */
+export const groupMessages = mysqlTable("group_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  groupId: int("group_id").notNull(),
+  senderId: int("sender_id").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type GroupMessage = typeof groupMessages.$inferSelect;
+export type InsertGroupMessage = typeof groupMessages.$inferInsert;
+
+/**
  * Calendar events
  */
 export const calendarEvents = mysqlTable("calendar_events", {

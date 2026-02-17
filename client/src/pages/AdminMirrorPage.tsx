@@ -81,15 +81,23 @@ function PostsManagement({ adminId }: { adminId: number }) {
   });
 
   useEffect(() => {
-    if (postsQuery.data) {
+    // getAllPostsForAdmin retorna um array diretamente
+    if (Array.isArray(postsQuery.data)) {
       setPosts(postsQuery.data);
+    } else if (postsQuery.data) {
+      setPosts([postsQuery.data]);
     }
   }, [postsQuery.data]);
 
   const handleUpdateLikes = (postId: number) => {
     const likesCount = parseInt(editingLikes, 10);
     if (isNaN(likesCount) || likesCount < 0) {
-      toast.error("Digite um número válido");
+      toast.error("Digite um número válido de likes");
+      return;
+    }
+
+    if (likesCount > 999999) {
+      toast.error("Número de likes muito alto");
       return;
     }
 

@@ -21,6 +21,12 @@ import {
   libraryFiles,
   InsertNotification,
   notifications,
+  messageGroups,
+  InsertMessageGroup,
+  groupMembers,
+  InsertGroupMember,
+  groupMessages,
+  InsertGroupMessage,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -563,4 +569,90 @@ export async function deleteNotification(id: number) {
   if (!db) throw new Error("Database not available");
 
   return await db.delete(notifications).where(eq(notifications.id, id));
+}
+
+
+// ============================================================================
+// MESSAGE GROUPS (GROUP CHATS)
+// ============================================================================
+
+export async function createMessageGroup(group: InsertMessageGroup) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.insert(messageGroups).values(group);
+}
+
+export async function getMessageGroupById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(messageGroups)
+    .where(eq(messageGroups.id, id))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getGroupsByStudentId(studentId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(messageGroups)
+    .innerJoin(groupMembers, eq(messageGroups.id, groupMembers.groupId))
+    .where(eq(groupMembers.studentId, studentId));
+}
+
+export async function addGroupMember(member: InsertGroupMember) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.insert(groupMembers).values(member);
+}
+
+export async function getGroupMembers(groupId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(groupMembers)
+    .where(eq(groupMembers.groupId, groupId));
+}
+
+export async function removeGroupMember(groupId: number, studentId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db
+    .delete(groupMembers)
+    .where(
+      and(eq(groupMembers.groupId, groupId), eq(groupMembers.studentId, studentId))
+    );
+}
+
+export async function createGroupMessage(message: InsertGroupMessage) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.insert(groupMessages).values(message);
+}
+
+export async function getGroupMessages(groupId: number, limit = 50, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(groupMessages)
+    .where(eq(groupMessages.groupId, groupId))
+    .orderBy(desc(groupMessages.createdAt))
+    .limit(limit)
+    .offset(offset);
+}
+
+export async function deleteMessageGroup(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Delete all group members first
+  await db.delete(groupMembers).where(eq(groupMembers.groupId, id));
+  // Delete all group messages
+  await db.delete(groupMessages).where(eq(groupMessages.groupId, id));
+  // Delete the group
+  return await db.delete(messageGroups).where(eq(messageGroups.id, id));
 }

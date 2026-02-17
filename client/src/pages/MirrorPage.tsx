@@ -77,32 +77,25 @@ export default function MirrorPage() {
   const handleCreatePost = async () => {
     if (!newPost.trim() || !user?.id) return;
 
-    let imageUrl = undefined;
-
-    // Se houver imagem, fazer upload primeiro
-    if (selectedImage) {
-      try {
-        // Aqui você pode adicionar lógica de upload para S3
-        // Por enquanto, usaremos apenas a URL de preview
-        imageUrl = imagePreview || undefined;
-      } catch (error) {
-        alert("Erro ao fazer upload da imagem");
-        return;
-      }
+    // Validar comprimento do post (máximo 500 caracteres)
+    if (newPost.length > 500) {
+      alert("Post muito longo! Máximo 500 caracteres");
+      return;
     }
 
     createPostMutation.mutate({
       studentId: Number(user.id),
       content: newPost,
-      imageUrl,
+      // imageUrl será adicionado quando S3 estiver configurado
     });
   };
 
   if (!user) return null;
 
   // Garante que posts seja sempre um array
-  const posts = Array.isArray(postsQuery.data?.posts)
-    ? postsQuery.data.posts
+  // getFeed retorna um array diretamente, não um objeto com propriedade posts
+  const posts = Array.isArray(postsQuery.data)
+    ? postsQuery.data
     : [];
 
   return (

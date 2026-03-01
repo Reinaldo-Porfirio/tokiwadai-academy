@@ -53,6 +53,7 @@ function PostsManagement({ adminId }: { adminId: number }) {
   const [posts, setPosts] = useState<any[]>([]);
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
   const [editingLikes, setEditingLikes] = useState<string>("");
+  const [editingContent, setEditingContent] = useState<string>("");
 
   const postsQuery = trpc.mirrorAdmin.getAllPostsForAdmin.useQuery(
     { adminId, limit: 50, offset: 0 },
@@ -73,6 +74,18 @@ function PostsManagement({ adminId }: { adminId: number }) {
   const deletePostMutation = trpc.mirrorAdmin.deletePostAsAdmin.useMutation({
     onSuccess: () => {
       toast.success("Postagem deletada!");
+      postsQuery.refetch();
+    },
+    onError: (error: any) => {
+      toast.error(`Erro: ${error.message}`);
+    },
+  });
+
+  const updateContentMutation = trpc.mirrorAdmin.updatePostContent.useMutation({
+    onSuccess: () => {
+      toast.success("Conteúdo atualizado!");
+      setEditingPostId(null);
+      setEditingContent("");
       postsQuery.refetch();
     },
     onError: (error: any) => {
@@ -118,6 +131,24 @@ function PostsManagement({ adminId }: { adminId: number }) {
     }
   };
 
+  const handleUpdateContent = (postId: number) => {
+    if (!editingContent.trim()) {
+      toast.error("Conteúdo não pode estar vazio");
+      return;
+    }
+
+    if (editingContent.length > 500) {
+      toast.error("Conteúdo muito longo! Máximo 500 caracteres");
+      return;
+    }
+
+    updateContentMutation.mutate({
+      adminId,
+      postId,
+      content: editingContent,
+    });
+  };
+
   return (
     <div className="space-y-4 mt-6">
       {postsQuery.isLoading ? (
@@ -158,27 +189,54 @@ function PostsManagement({ adminId }: { adminId: number }) {
               </div>
 
               {editingPostId === post.id ? (
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    placeholder="Novo número de likes"
-                    value={editingLikes}
-                    onChange={(e) => setEditingLikes(e.target.value)}
-                    min="0"
-                  />
-                  <Button
-                    onClick={() => handleUpdateLikes(post.id)}
-                    disabled={updateLikesMutation.isPending}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    Salvar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setEditingPostId(null)}
-                  >
-                    Cancelar
-                  </Button>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600">Editar Conteúdo:</label>
+                    <textarea
+                      placeholder="Novo conteúdo do post"
+                      value={editingContent}
+                      onChange={(e) => setEditingContent(e.target.value)}
+                      className="w-full p-2 border rounded-md text-sm min-h-[80px] resize-none"
+                      maxLength={500}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">{editingContent.length}/500 caracteres</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600">Editar Likes:</label>
+                    <Input
+                      type="number"
+                      placeholder="Número de likes"
+                      value={editingLikes}
+                      onChange={(e) => setEditingLikes(e.target.value)}
+                      min="0"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleUpdateContent(post.id)}
+                      disabled={updateContentMutation.isPending}
+                      className="bg-blue-600 hover:bg-blue-700 flex-1"
+                    >
+                      Salvar Conteúdo
+                    </Button>
+                    <Button
+                      onClick={() => handleUpdateLikes(post.id)}
+                      disabled={updateLikesMutation.isPending}
+                      className="bg-green-600 hover:bg-green-700 flex-1"
+                    >
+                      Salvar Likes
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditingPostId(null);
+                        setEditingContent("");
+                        setEditingLikes("");
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="flex gap-2">
@@ -188,11 +246,12 @@ function PostsManagement({ adminId }: { adminId: number }) {
                     onClick={() => {
                       setEditingPostId(post.id);
                       setEditingLikes(String(post.likesCount || 0));
+                      setEditingContent(post.content);
                     }}
                     className="gap-2"
                   >
                     <Edit2 size={16} />
-                    Editar Likes
+                    Editar
                   </Button>
                   <Button
                     variant="destructive"

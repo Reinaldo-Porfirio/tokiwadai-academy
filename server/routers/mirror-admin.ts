@@ -241,6 +241,43 @@ export const mirrorAdminRouter = router({
     }),
 
   /**
+   * Update post content (admin only)
+   */
+  updatePostContent: publicProcedure
+    .input(
+      z.object({
+        adminId: z.number(),
+        postId: z.number(),
+        content: z.string().min(1).max(500),
+      })
+    )
+    .mutation(async ({ input }) => {
+      // Verify admin exists
+      const admin = await db.getAdminById(input.adminId);
+      if (!admin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only admins can access this",
+        });
+      }
+
+      const post = await db.getPostById(input.postId);
+      if (!post) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Post not found",
+        });
+      }
+
+      await db.updatePost(input.postId, { content: input.content });
+
+      return {
+        success: true,
+        message: "Post content updated successfully",
+      };
+    }),
+
+  /**
    * Get mirror statistics for admin dashboard
    */
   getMirrorStatsForAdmin: publicProcedure

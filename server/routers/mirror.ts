@@ -353,6 +353,42 @@ export const mirrorRouter = router({
     }),
 
   /**
+   * Update a post (edit content)
+   */
+  updatePost: publicProcedure
+    .input(
+      z.object({
+        postId: z.number(),
+        studentId: z.number(),
+        content: z.string().min(1).max(500),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const post = await db.getPostById(input.postId);
+      if (!post) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Post not found",
+        });
+      }
+
+      // Verify ownership
+      if (post.studentId !== input.studentId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You can only edit your own posts",
+        });
+      }
+
+      await db.updatePost(input.postId, { content: input.content });
+
+      return {
+        success: true,
+        message: "Post updated successfully",
+      };
+    }),
+
+  /**
    * Get mirror statistics (for admin dashboard)
    */
   getStats: publicProcedure.query(async () => {

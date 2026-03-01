@@ -48,16 +48,38 @@ export const mirrorRouter = router({
       z.object({
         limit: z.number().int().min(1).max(100).default(20),
         offset: z.number().int().min(0).default(0),
+        studentId: z.number().optional(),
       })
     )
     .query(async ({ input }) => {
       const posts = await db.getAllPosts(input.limit, input.offset);
 
-      // Enrich posts with student data
+      // Enrich posts with student data, comments, and likes
       const enrichedPosts = await Promise.all(
         posts.map(async (post) => {
           const student = await db.getStudentById(post.studentId);
           const comments = await db.getCommentsByPostId(post.id);
+          const likes = await db.getLikesByPostId(post.id);
+          const isLiked = input.studentId
+            ? await db.getLikeByPostAndStudent(post.id, input.studentId)
+            : null;
+
+          // Enrich comments with student data
+          const enrichedComments = await Promise.all(
+            comments.map(async (comment) => {
+              const commentStudent = await db.getStudentById(comment.studentId);
+              return {
+                ...comment,
+                student: commentStudent
+                  ? {
+                      id: commentStudent.id,
+                      fullName: commentStudent.fullName,
+                      studentId: commentStudent.studentId,
+                    }
+                  : null,
+              };
+            })
+          );
 
           return {
             ...post,
@@ -67,9 +89,14 @@ export const mirrorRouter = router({
                   fullName: student.fullName,
                   studentId: student.studentId,
                   profilePicture: student.profilePicture,
+                  district: student.district,
                 }
               : null,
+            comments: enrichedComments,
+            likes: likes,
+            likesCount: likes.length,
             commentsCount: comments.length,
+            isLiked: !!isLiked,
           };
         })
       );
@@ -124,37 +151,6 @@ export const mirrorRouter = router({
     }),
 
   /**
-   * Delete a post
-   */
-  deletePost: publicProcedure
-    .input(z.object({ postId: z.number(), studentId: z.number() }))
-    .mutation(async ({ input }) => {
-      const post = await db.getPostById(input.postId);
-
-      if (!post) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Post not found",
-        });
-      }
-
-      // Check if student owns the post
-      if (post.studentId !== input.studentId) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You can only delete your own posts",
-        });
-      }
-
-      await db.deletePost(input.postId);
-
-      return {
-        success: true,
-        message: "Post deleted successfully",
-      };
-    }),
-
-  /**
    * Like a post
    */
   likePost: publicProcedure
@@ -176,10 +172,13 @@ export const mirrorRouter = router({
       );
 
       if (existingLike) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Already liked this post",
-        });
+        // Se já curtiu, descurtir
+        await db.deleteLike(input.postId, input.studentId);
+        return {
+          success: true,
+          message: "Post unliked successfully",
+          liked: false,
+        };
       }
 
       // Create like
@@ -188,14 +187,10 @@ export const mirrorRouter = router({
         studentId: input.studentId,
       });
 
-      // Update post likes count
-      const updatedPost = await db.getPostById(input.postId);
-      const allLikes = await db.getAllPosts(1000, 0); // Get all posts to count likes
-      const postLikes = allLikes.filter((p) => p.id === input.postId);
-
       return {
         success: true,
         message: "Post liked successfully",
+        liked: true,
       };
     }),
 
@@ -238,20 +233,17 @@ export const mirrorRouter = router({
     )
     .mutation(async ({ input }) => {
       const post = await db.getPostById(input.postId);
-
       if (!post) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Post not found",
         });
       }
-
       await db.createComment({
         postId: input.postId,
         studentId: input.studentId,
         content: input.content,
       });
-
       return {
         success: true,
         message: "Comment added successfully",
@@ -264,19 +256,16 @@ export const mirrorRouter = router({
   deleteComment: publicProcedure
     .input(z.object({ commentId: z.number(), studentId: z.number() }))
     .mutation(async ({ input }) => {
-      const comment = await db.getCommentsByPostId(input.commentId);
+      const comment = await db.getCommentById(input.commentId);
 
-      if (comment.length === 0) {
+      if (!comment) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Comment not found",
         });
       }
 
-      const targetComment = comment[0];
-
-      // Check if student owns the comment
-      if (targetComment.studentId !== input.studentId) {
+      if (comment.studentId !== input.studentId) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "You can only delete your own comments",
@@ -288,6 +277,42 @@ export const mirrorRouter = router({
       return {
         success: true,
         message: "Comment deleted successfully",
+      };
+    }),
+
+  /**
+   * Update a post (edit content)
+   */
+  updatePost: publicProcedure
+    .input(
+      z.object({
+        postId: z.number(),
+        studentId: z.number(),
+        content: z.string().min(1).max(500),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const post = await db.getPostById(input.postId);
+      if (!post) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Post not found",
+        });
+      }
+
+      // Verify ownership
+      if (post.studentId !== input.studentId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You can only edit your own posts",
+        });
+      }
+
+      await db.updatePost(input.postId, { content: input.content });
+
+      return {
+        success: true,
+        message: "Post updated successfully",
       };
     }),
 
@@ -350,42 +375,6 @@ export const mirrorRouter = router({
           };
         })
       );
-    }),
-
-  /**
-   * Update a post (edit content)
-   */
-  updatePost: publicProcedure
-    .input(
-      z.object({
-        postId: z.number(),
-        studentId: z.number(),
-        content: z.string().min(1).max(500),
-      })
-    )
-    .mutation(async ({ input }) => {
-      const post = await db.getPostById(input.postId);
-      if (!post) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Post not found",
-        });
-      }
-
-      // Verify ownership
-      if (post.studentId !== input.studentId) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You can only edit your own posts",
-        });
-      }
-
-      await db.updatePost(input.postId, { content: input.content });
-
-      return {
-        success: true,
-        message: "Post updated successfully",
-      };
     }),
 
   /**

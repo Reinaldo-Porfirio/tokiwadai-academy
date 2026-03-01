@@ -3,8 +3,9 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Heart, MessageSquare, Send, Image as ImageIcon, X } from "lucide-react";
+import { Heart, MessageSquare, Send, Image as ImageIcon, X, Edit2, Save } from "lucide-react";
 import { useLocation } from "wouter";
+import { toast } from "sonner";
 
 export default function MirrorPage() {
   const [, navigate] = useLocation();
@@ -25,8 +26,8 @@ export default function MirrorPage() {
 
   // 2. Query para obter feed de posts
   const postsQuery = trpc.mirror.getFeed.useQuery(
-    { limit: 50, offset: 0 },
-    { refetchInterval: 3000, staleTime: 0 }
+    { limit: 50, offset: 0, studentId: user?.id },
+    { refetchInterval: 3000, staleTime: 0, enabled: !!user?.id }
   );
 
   // 3. Mutation para criar posts
@@ -35,10 +36,11 @@ export default function MirrorPage() {
       setNewPost("");
       setSelectedImage(null);
       setImagePreview(null);
+      toast.success("Post criado com sucesso!");
       // Refetch imediatamente após sucesso
       setTimeout(() => postsQuery.refetch(), 500);
     },
-    onError: (err) => alert("Erro ao postar: " + err.message),
+    onError: (err) => toast.error("Erro ao postar: " + err.message),
   });
 
   // Função para lidar com seleção de imagem
@@ -47,13 +49,13 @@ export default function MirrorPage() {
     if (file) {
       // Validar tamanho (máximo 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert("Imagem muito grande! Máximo 5MB");
+        toast.error("Imagem muito grande! Máximo 5MB");
         return;
       }
 
       // Validar tipo
       if (!file.type.startsWith("image/")) {
-        alert("Por favor, selecione uma imagem válida");
+        toast.error("Por favor, selecione uma imagem válida");
         return;
       }
 
@@ -79,7 +81,7 @@ export default function MirrorPage() {
 
     // Validar comprimento do post (máximo 500 caracteres)
     if (newPost.length > 500) {
-      alert("Post muito longo! Máximo 500 caracteres");
+      toast.error("Post muito longo! Máximo 500 caracteres");
       return;
     }
 
@@ -93,10 +95,7 @@ export default function MirrorPage() {
   if (!user) return null;
 
   // Garante que posts seja sempre um array
-  // getFeed retorna um array diretamente, não um objeto com propriedade posts
-  const posts = Array.isArray(postsQuery.data)
-    ? postsQuery.data
-    : [];
+  const posts = Array.isArray(postsQuery.data) ? postsQuery.data : [];
 
   return (
     <div className="w-full p-4 space-y-6 bg-gray-50 min-h-screen">
@@ -192,117 +191,207 @@ function PostCard({
 }) {
   const [comment, setComment] = useState("");
   const [showComments, setShowComments] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState(post.content);
 
-  // Mutations para Like e Comentário
+  // Mutations para Like, Comentário e Edição
   const likeMutation = trpc.mirror.likePost.useMutation({
-    onSuccess: refetch,
+    onSuccess: () => {
+      refetch();
+      toast.success("Curtida atualizada!");
+    },
+    onError: (err) => toast.error("Erro ao curtir: " + err.message),
   });
+
   const commentMutation = trpc.mirror.addComment.useMutation({
     onSuccess: () => {
       setComment("");
       refetch();
+      toast.success("Comentário adicionado!");
     },
+    onError: (err) => toast.error("Erro ao comentar: " + err.message),
+  });
+
+  const updatePostMutation = trpc.mirror.updatePost.useMutation({
+    onSuccess: () => {
+      setIsEditing(false);
+      refetch();
+      toast.success("Post atualizado!");
+    },
+    onError: (err) => toast.error("Erro ao atualizar: " + err.message),
   });
 
   // Mapeamento de dados
   const student = post.student;
+  const isOwner = post.studentId === currentUserId;
+
+  const handleUpdatePost = () => {
+    if (!editedContent.trim()) {
+      toast.error("Conteúdo não pode estar vazio");
+      return;
+    }
+
+    if (editedContent.length > 500) {
+      toast.error("Conteúdo muito longo! Máximo 500 caracteres");
+      return;
+    }
+
+    updatePostMutation.mutate({
+      postId: post.id,
+      studentId: currentUserId,
+      content: editedContent,
+    });
+  };
 
   return (
     <Card className="hover:border-red-300 transition-all shadow-sm bg-white max-w-2xl mx-auto">
-      <CardHeader className="flex flex-row items-center gap-3 pb-2">
-        <div className="w-10 h-10 rounded-full bg-red-700 flex items-center justify-center font-bold text-white shadow-inner">
-          {student?.fullName?.[0] || "?"}
+      <CardHeader className="flex flex-row items-center gap-3 pb-2 justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-red-700 flex items-center justify-center font-bold text-white shadow-inner">
+            {student?.fullName?.[0] || "?"}
+          </div>
+          <div>
+            <p className="font-bold text-sm text-gray-900">
+              {student?.fullName || "Usuário"}
+            </p>
+            <p className="text-[10px] text-gray-400 font-mono">
+              ID: {student?.studentId || "N/A"} • Distrito{" "}
+              {student?.district || "?"}
+            </p>
+          </div>
         </div>
-        <div>
-          <p className="font-bold text-sm text-gray-900">
-            {student?.fullName || "Usuário"}
-          </p>
-          <p className="text-[10px] text-gray-400 font-mono">
-            ID: {student?.studentId || "N/A"} • Distrito{" "}
-            {student?.district || "?"}
-          </p>
-        </div>
+        {isOwner && !isEditing && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setIsEditing(true)}
+            className="gap-1"
+          >
+            <Edit2 size={14} />
+            Editar
+          </Button>
+        )}
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
-          {post.content}
-        </p>
-
-        {/* Imagem do Post */}
-        {post.imageUrl && (
-          <img
-            src={post.imageUrl}
-            alt="Post"
-            className="w-full rounded-md object-cover max-h-96"
-          />
-        )}
-
-        {/* Barra de Ações */}
-        <div className="flex items-center gap-6 border-t pt-3 text-gray-500 text-sm">
-          <button
-            onClick={() =>
-              likeMutation.mutate({ postId: post.id, studentId: currentUserId })
-            }
-            className={`flex items-center gap-1.5 hover:text-red-600 transition ${
-              post.isLiked ? "text-red-600" : ""
-            }`}
-          >
-            <Heart
-              size={18}
-              fill={post.isLiked ? "currentColor" : "none"}
+        {isEditing ? (
+          <div className="space-y-2">
+            <textarea
+              value={editedContent}
+              onChange={(e) => setEditedContent(e.target.value)}
+              className="w-full p-2 border rounded-md text-sm min-h-[80px] resize-none"
+              maxLength={500}
             />
-            <span className="text-xs font-bold">{post.likes?.length || 0}</span>
-          </button>
-
-          <button
-            onClick={() => setShowComments(!showComments)}
-            className="flex items-center gap-1.5 hover:text-blue-600 transition"
-          >
-            <MessageSquare size={18} />
-            <span className="text-xs font-bold">
-              {post.comments?.length || 0}
-            </span>
-          </button>
-        </div>
-
-        {/* Área de Comentários */}
-        {showComments && (
-          <div className="space-y-3 mt-4 bg-gray-50 p-3 rounded-md border border-gray-100">
-            {post.comments?.map((c: any) => (
-              <div
-                key={c.id}
-                className="text-xs border-b border-gray-200 pb-2 last:border-0"
-              >
-                <span className="font-bold text-red-800">
-                  {c.student?.fullName || "Anônimo"}:{" "}
-                </span>
-                <span className="text-gray-700">{c.content}</span>
-              </div>
-            ))}
-            <div className="flex gap-2 mt-2">
-              <Input
-                placeholder="Escreva um comentário..."
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                className="h-8 text-[11px] bg-white border-red-100 focus:border-red-500"
-              />
+            <p className="text-xs text-gray-500">{editedContent.length}/500 caracteres</p>
+            <div className="flex gap-2">
               <Button
                 size="sm"
-                className="h-8 px-3 bg-red-700 hover:bg-red-800 text-white"
-                disabled={!comment.trim() || commentMutation.isPending}
-                onClick={() =>
-                  commentMutation.mutate({
-                    postId: post.id,
-                    studentId: currentUserId,
-                    content: comment,
-                  })
-                }
+                onClick={handleUpdatePost}
+                disabled={updatePostMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700 gap-1"
               >
-                <Send size={14} />
+                <Save size={14} />
+                Salvar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setIsEditing(false);
+                  setEditedContent(post.content);
+                }}
+              >
+                Cancelar
               </Button>
             </div>
           </div>
+        ) : (
+          <>
+            <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
+              {post.content}
+            </p>
+
+            {/* Imagem do Post */}
+            {post.imageUrl && (
+              <img
+                src={post.imageUrl}
+                alt="Post"
+                className="w-full rounded-md object-cover max-h-96"
+              />
+            )}
+
+            {/* Barra de Ações */}
+            <div className="flex items-center gap-6 border-t pt-3 text-gray-500 text-sm">
+              <button
+                onClick={() =>
+                  likeMutation.mutate({ postId: post.id, studentId: currentUserId })
+                }
+                disabled={likeMutation.isPending}
+                className={`flex items-center gap-1.5 hover:text-red-600 transition ${
+                  post.isLiked ? "text-red-600" : ""
+                }`}
+              >
+                <Heart
+                  size={18}
+                  fill={post.isLiked ? "currentColor" : "none"}
+                />
+                <span className="text-xs font-bold">{post.likesCount || 0}</span>
+              </button>
+
+              <button
+                onClick={() => setShowComments(!showComments)}
+                className="flex items-center gap-1.5 hover:text-blue-600 transition"
+              >
+                <MessageSquare size={18} />
+                <span className="text-xs font-bold">
+                  {post.commentsCount || 0}
+                </span>
+              </button>
+            </div>
+
+            {/* Área de Comentários */}
+            {showComments && (
+              <div className="space-y-3 mt-4 bg-gray-50 p-3 rounded-md border border-gray-100">
+                {post.comments && post.comments.length > 0 ? (
+                  post.comments.map((c: any) => (
+                    <div
+                      key={c.id}
+                      className="text-xs border-b border-gray-200 pb-2 last:border-0"
+                    >
+                      <span className="font-bold text-red-800">
+                        {c.student?.fullName || "Anônimo"}:{" "}
+                      </span>
+                      <span className="text-gray-700">{c.content}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-gray-500 italic">Nenhum comentário ainda</p>
+                )}
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    placeholder="Escreva um comentário..."
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    className="h-8 text-[11px] bg-white border-red-100 focus:border-red-500"
+                  />
+                  <Button
+                    size="sm"
+                    className="h-8 px-3 bg-red-700 hover:bg-red-800 text-white"
+                    disabled={!comment.trim() || commentMutation.isPending}
+                    onClick={() =>
+                      commentMutation.mutate({
+                        postId: post.id,
+                        studentId: currentUserId,
+                        content: comment,
+                      })
+                    }
+                  >
+                    <Send size={14} />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

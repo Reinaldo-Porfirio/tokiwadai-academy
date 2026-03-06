@@ -13,6 +13,7 @@ export default function MirrorPage() {
   const [user, setUser] = useState<any>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
 
   // 1. Recupera o usuário logado
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function MirrorPage() {
       setNewPost("");
       setSelectedImage(null);
       setImagePreview(null);
+      setImageBase64(null);
       toast.success("Post criado com sucesso!");
       // Refetch imediatamente após sucesso
       setTimeout(() => postsQuery.refetch(), 500);
@@ -61,10 +63,12 @@ export default function MirrorPage() {
 
       setSelectedImage(file);
 
-      // Criar preview
+      // Criar preview e converter para base64
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        const base64String = reader.result as string;
+        setImagePreview(base64String);
+        setImageBase64(base64String);
       };
       reader.readAsDataURL(file);
     }
@@ -74,6 +78,7 @@ export default function MirrorPage() {
   const handleRemoveImage = () => {
     setSelectedImage(null);
     setImagePreview(null);
+    setImageBase64(null);
   };
 
   const handleCreatePost = async () => {
@@ -88,7 +93,7 @@ export default function MirrorPage() {
     createPostMutation.mutate({
       studentId: Number(user.id),
       content: newPost,
-      // imageUrl será adicionado quando S3 estiver configurado
+      imageUrl: imageBase64 || undefined,
     });
   };
 
@@ -193,14 +198,21 @@ function PostCard({
   const [showComments, setShowComments] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(post.content);
+  const [localIsLiked, setLocalIsLiked] = useState(post.isLiked);
+  const [localLikesCount, setLocalLikesCount] = useState(post.likesCount || 0);
 
   // Mutations para Like, Comentário e Edição
   const likeMutation = trpc.mirror.likePost.useMutation({
     onSuccess: () => {
-      refetch();
+      // Não fazer refetch aqui, apenas atualizar o estado local
       toast.success("Curtida atualizada!");
     },
-    onError: (err) => toast.error("Erro ao curtir: " + err.message),
+    onError: (err) => {
+      // Reverter o estado local em caso de erro
+      setLocalIsLiked(!localIsLiked);
+      setLocalLikesCount(localIsLiked ? localLikesCount + 1 : localLikesCount - 1);
+      toast.error("Erro ao curtir: " + err.message);
+    },
   });
 
   const commentMutation = trpc.mirror.addComment.useMutation({
@@ -241,6 +253,16 @@ function PostCard({
       studentId: currentUserId,
       content: editedContent,
     });
+  };
+
+  const handleLikeClick = () => {
+    // Atualizar estado local imediatamente (optimistic update)
+    const newIsLiked = !localIsLiked;
+    setLocalIsLiked(newIsLiked);
+    setLocalLikesCount(newIsLiked ? localLikesCount + 1 : localLikesCount - 1);
+
+    // Enviar para o servidor
+    likeMutation.mutate({ postId: post.id, studentId: currentUserId });
   };
 
   return (
@@ -323,19 +345,17 @@ function PostCard({
             {/* Barra de Ações */}
             <div className="flex items-center gap-6 border-t pt-3 text-gray-500 text-sm">
               <button
-                onClick={() =>
-                  likeMutation.mutate({ postId: post.id, studentId: currentUserId })
-                }
+                onClick={handleLikeClick}
                 disabled={likeMutation.isPending}
                 className={`flex items-center gap-1.5 hover:text-red-600 transition ${
-                  post.isLiked ? "text-red-600" : ""
+                  localIsLiked ? "text-red-600" : ""
                 }`}
               >
                 <Heart
                   size={18}
-                  fill={post.isLiked ? "currentColor" : "none"}
+                  fill={localIsLiked ? "currentColor" : "none"}
                 />
-                <span className="text-xs font-bold">{post.likesCount || 0}</span>
+                <span className="text-xs font-bold">{localLikesCount}</span>
               </button>
 
               <button

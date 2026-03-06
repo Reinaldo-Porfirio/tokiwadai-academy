@@ -97,6 +97,8 @@ function PostsManagement({ adminId }: { adminId: number }) {
     // getAllPostsForAdmin retorna um array diretamente
     if (Array.isArray(postsQuery.data)) {
       setPosts(postsQuery.data);
+    } else if (postsQuery.data?.posts) {
+      setPosts(postsQuery.data.posts);
     } else if (postsQuery.data) {
       setPosts([postsQuery.data]);
     }
@@ -296,7 +298,9 @@ function FollowersManagement({ adminId }: { adminId: number }) {
   });
 
   useEffect(() => {
-    if (studentsQuery.data?.students) {
+    if (Array.isArray(studentsQuery.data)) {
+      setStudents(studentsQuery.data);
+    } else if (studentsQuery.data?.students) {
       setStudents(studentsQuery.data.students);
     }
   }, [studentsQuery.data]);

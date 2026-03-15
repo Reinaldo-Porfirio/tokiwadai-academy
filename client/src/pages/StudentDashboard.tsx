@@ -3,7 +3,10 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, LogOut, MessageSquare, Calendar, Book, Map, Settings } from "lucide-react";
+import { User, LogOut, MessageSquare, Calendar, Book, Map, Settings, Users } from "lucide-react";
+import MirrorPage from "./MirrorPage";
+import MessagesPage from "./MessagesPage";
+import GroupMessagesPage from "./GroupMessagesPage";
 
 export default function StudentDashboard() {
   const [, navigate] = useLocation();
@@ -69,7 +72,17 @@ export default function StudentDashboard() {
             }`}
           >
             <MessageSquare size={20} />
-            <span>Mensagens</span>
+            <span>Mensagens Privadas</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("groups")}
+            className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition ${
+              activeTab === "groups" ? "bg-blue-700" : "hover:bg-blue-800"
+            }`}
+          >
+            <Users size={20} />
+            <span>Grupos</span>
           </button>
 
           <button
@@ -167,25 +180,15 @@ export default function StudentDashboard() {
             </TabsContent>
 
             <TabsContent value="mirror">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Mirror - Rede Social</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Funcionalidade em desenvolvimento...</p>
-                </CardContent>
-              </Card>
+              <MirrorPage />
             </TabsContent>
 
             <TabsContent value="messages">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Mensagens Privadas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Funcionalidade em desenvolvimento...</p>
-                </CardContent>
-              </Card>
+              <MessagesPage />
+            </TabsContent>
+
+            <TabsContent value="groups">
+              <GroupMessagesPage />
             </TabsContent>
 
             <TabsContent value="calendar">

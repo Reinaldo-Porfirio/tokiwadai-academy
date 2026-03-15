@@ -6,6 +6,7 @@ import { authRouter } from "./routers/auth";
 import { studentsRouter } from "./routers/students";
 import { mirrorRouter } from "./routers/mirror";
 import { messagesRouter } from "./routers/messages";
+import { groupsRouter } from "./routers/groups";
 import { academicRouter } from "./routers/academic";
 import { adminRouter } from "./routers/admin";
 import { notificationsRouter } from "./routers/notifications";
@@ -16,6 +17,7 @@ export const appRouter = router({
   students: studentsRouter,
   mirror: mirrorRouter,
   messages: messagesRouter,
+  groups: groupsRouter,
   academic: academicRouter,
   admin: adminRouter,
   notifications: notificationsRouter,

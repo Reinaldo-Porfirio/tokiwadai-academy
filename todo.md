@@ -36,21 +36,21 @@
 - [x] Confirmação de deleção
 
 ## Mirror (Rede Social)
-- [ ] Feed cronológico reverso com posts
-- [ ] Criar posts com texto (máx 500 chars) + imagem opcional
-- [ ] Sistema de likes (1 por usuário)
-- [ ] Comentários expandíveis em posts
-- [ ] Deletar próprios posts
+- [x] Feed cronológico reverso com posts
+- [x] Criar posts com texto (máx 500 chars) + imagem opcional
+- [x] Sistema de likes (1 por usuário)
+- [x] Comentários expandíveis em posts
+- [x] Deletar próprios posts
 - [ ] Busca por autor e hashtags
-- [ ] Contador de likes e comentários
+- [x] Contador de likes e comentários
 
 ## Mensagens Privadas
-- [ ] Lista de conversas
-- [ ] Área de chat com histórico
-- [ ] Enviar mensagens entre estudantes
-- [ ] Busca por nome/ID de estudante
-- [ ] Notificação de mensagens não lidas
-- [ ] Marcar como lido
+- [x] Lista de conversas
+- [x] Área de chat com histórico
+- [x] Enviar mensagens entre estudantes
+- [x] Busca por nome/ID de estudante
+- [x] Notificação de mensagens não lidas
+- [x] Marcar como lido
 
 ## Calendário Acadêmico
 - [ ] Visualização de calendário mensal
@@ -129,12 +129,22 @@
 - [ ] Ícones para sidebar
 - [ ] Componentes reutilizáveis
 
+## Grupos de Mensagens (NOVO)
+- [x] Criar grupos
+- [x] Adicionar/remover membros
+- [x] Enviar mensagens em grupos
+- [x] Listar grupos de um estudante
+- [x] Deletar grupos (apenas criador)
+- [ ] Adicionar/remover membros via UI
+- [ ] Visualizar membros do grupo
+
 ## Testes
 - [x] Testes unitários para autenticação
 - [x] Testes para geração de ID de estudante
 - [ ] Testes para CRUD de estudantes
 - [ ] Testes para Mirror (posts, likes, comentários)
 - [ ] Testes para mensagens privadas
+- [ ] Testes para grupos de mensagens
 
 ## Documentação
 - [ ] README.md com instruções de instalação

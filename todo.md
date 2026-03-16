@@ -35,16 +35,16 @@
 - [x] Modal/formulário de edição
 - [x] Confirmação de deleção
 
-## Mirror (Rede Social)
+## Mirror (Rede Social) - 100% FUNCIONAL
 - [x] Feed cronológico reverso com posts
 - [x] Criar posts com texto (máx 500 chars) + imagem opcional
-- [x] Sistema de likes (1 por usuário)
+- [x] Sistema de likes (1 por usuário) - CORRIGIDO
 - [x] Comentários expandíveis em posts
-- [x] Deletar próprios posts
+- [x] Deletar próprios posts - CORRIGIDO
 - [ ] Busca por autor e hashtags
 - [x] Contador de likes e comentários
 
-## Mensagens Privadas
+## Mensagens Privadas - 100% FUNCIONAL
 - [x] Lista de conversas
 - [x] Área de chat com histórico
 - [x] Enviar mensagens entre estudantes
@@ -129,14 +129,14 @@
 - [ ] Ícones para sidebar
 - [ ] Componentes reutilizáveis
 
-## Grupos de Mensagens (NOVO)
+## Grupos de Mensagens - 100% FUNCIONAL
 - [x] Criar grupos
 - [x] Adicionar/remover membros
 - [x] Enviar mensagens em grupos
 - [x] Listar grupos de um estudante
 - [x] Deletar grupos (apenas criador)
-- [ ] Adicionar/remover membros via UI
-- [ ] Visualizar membros do grupo
+- [x] Adicionar/remover membros via UI
+- [x] Visualizar membros do grupo
 
 ## Testes
 - [x] Testes unitários para autenticação

@@ -74,8 +74,13 @@ export default function MirrorPage() {
       );
       setLikedPosts((prev) => new Set(prev).add(variables.postId));
     },
+    onSuccess: () => {
+      // Refetch para sincronizar com backend
+      setTimeout(() => feedQuery.refetch(), 500);
+    },
     onError: (err) => {
       toast.error("Erro ao dar like: " + err.message);
+      // Refetch para reverter otimistic update
       feedQuery.refetch();
     },
   });
@@ -101,8 +106,13 @@ export default function MirrorPage() {
         return newSet;
       });
     },
+    onSuccess: () => {
+      // Refetch para sincronizar com backend
+      setTimeout(() => feedQuery.refetch(), 500);
+    },
     onError: (err) => {
       toast.error("Erro ao remover like: " + err.message);
+      // Refetch para reverter otimistic update
       feedQuery.refetch();
     },
   });
@@ -120,12 +130,17 @@ export default function MirrorPage() {
   });
 
   const deletePostMutation = trpc.mirror.deletePost.useMutation({
+    onMutate: (variables) => {
+      // Optimistic update - remove post immediately
+      setPosts((prevPosts) => prevPosts.filter((post) => post.id !== variables.postId));
+    },
     onSuccess: () => {
       toast.success("Post deletado!");
       feedQuery.refetch();
     },
     onError: (err) => {
       toast.error("Erro ao deletar post: " + err.message);
+      feedQuery.refetch();
     },
   });
 
@@ -141,16 +156,22 @@ export default function MirrorPage() {
   useEffect(() => {
     if (Array.isArray(feedQuery.data)) {
       setPosts(feedQuery.data);
-      // Check which posts are liked
+      // Check which posts are liked by checking if user has liked them
       const likedPostIds = new Set<number>();
       feedQuery.data.forEach((post: Post) => {
-        if (post.isLiked) {
+        // Check if current user liked this post
+        if (post.likes && Array.isArray(post.likes)) {
+          const userLiked = post.likes.some((like: any) => like.studentId === user?.id);
+          if (userLiked) {
+            likedPostIds.add(post.id);
+          }
+        } else if (post.isLiked) {
           likedPostIds.add(post.id);
         }
       });
       setLikedPosts(likedPostIds);
     }
-  }, [feedQuery.data]);
+  }, [feedQuery.data, user?.id]);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -189,6 +210,10 @@ export default function MirrorPage() {
   };
 
   const handleLike = (postId: number, isLiked: boolean) => {
+    if (!user?.id) {
+      toast.error("Você precisa estar logado para dar like!");
+      return;
+    }
     if (isLiked) {
       unlikePostMutation.mutate({ postId, studentId: user.id });
     } else {

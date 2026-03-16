@@ -6,6 +6,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, LogOut, Settings, Trash2, Edit, Plus } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import StudentsManagement from "@/components/StudentsManagement";
+import ModerationPanel from "@/components/ModerationPanel";
+import AdminMessagesPanel from "@/components/AdminMessagesPanel";
+import AdminGroupsPanel from "@/components/AdminGroupsPanel";
+import AdminMirrorStatsPanel from "@/components/AdminMirrorStatsPanel";
 
 export default function AdminDashboard() {
   const [, navigate] = useLocation();
@@ -80,23 +84,23 @@ export default function AdminDashboard() {
           </button>
 
           <button
-            onClick={() => setActiveTab("calendar")}
+            onClick={() => setActiveTab("messages")}
             className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition ${
-              activeTab === "calendar" ? "bg-red-800" : "hover:bg-red-800"
+              activeTab === "messages" ? "bg-red-800" : "hover:bg-red-800"
             }`}
           >
             <Settings size={20} />
-            <span>Calendário</span>
+            <span>Mensagens</span>
           </button>
 
           <button
-            onClick={() => setActiveTab("library")}
+            onClick={() => setActiveTab("groups")}
             className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition ${
-              activeTab === "library" ? "bg-red-800" : "hover:bg-red-800"
+              activeTab === "groups" ? "bg-red-800" : "hover:bg-red-800"
             }`}
           >
             <Settings size={20} />
-            <span>Biblioteca</span>
+            <span>Grupos</span>
           </button>
 
           <button
@@ -129,16 +133,17 @@ export default function AdminDashboard() {
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="hidden">
-              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-              <TabsTrigger value="students">Estudantes</TabsTrigger>
-              <TabsTrigger value="moderation">Moderação</TabsTrigger>
-              <TabsTrigger value="calendar">Calendário</TabsTrigger>
-              <TabsTrigger value="library">Biblioteca</TabsTrigger>
-              <TabsTrigger value="settings">Configurações</TabsTrigger>
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="students">Estudantes</TabsTrigger>
+            <TabsTrigger value="moderation">Moderação</TabsTrigger>
+            <TabsTrigger value="messages">Mensagens</TabsTrigger>
+            <TabsTrigger value="groups">Grupos</TabsTrigger>
+            <TabsTrigger value="settings">Configurações</TabsTrigger>
             </TabsList>
 
             <TabsContent value="dashboard">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-sm font-medium">Total de Estudantes</CardTitle>
@@ -175,6 +180,8 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
               </div>
+              <AdminMirrorStatsPanel />
+              </div>
             </TabsContent>
 
             <TabsContent value="students">
@@ -182,36 +189,15 @@ export default function AdminDashboard() {
             </TabsContent>
 
             <TabsContent value="moderation">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Moderação do Mirror</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Funcionalidade em desenvolvimento...</p>
-                </CardContent>
-              </Card>
+              <ModerationPanel adminId={admin.id} />
             </TabsContent>
 
-            <TabsContent value="calendar">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Gerenciar Calendário</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Funcionalidade em desenvolvimento...</p>
-                </CardContent>
-              </Card>
+            <TabsContent value="messages">
+              <AdminMessagesPanel />
             </TabsContent>
 
-            <TabsContent value="library">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Gerenciar Biblioteca</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Funcionalidade em desenvolvimento...</p>
-                </CardContent>
-              </Card>
+            <TabsContent value="groups">
+              <AdminGroupsPanel adminId={admin.id} />
             </TabsContent>
 
             <TabsContent value="settings">

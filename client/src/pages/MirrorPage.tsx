@@ -49,10 +49,11 @@ export default function MirrorPage() {
       setSelectedImage(null);
       setIsPosting(false);
       toast.success("Post criado com sucesso!");
-      feedQuery.refetch();
+      setTimeout(() => feedQuery.refetch(), 500);
     },
     onError: (err) => {
       setIsPosting(false);
+      console.error("Create post error:", err);
       toast.error("Erro ao criar post: " + err.message);
     },
   });
@@ -75,13 +76,14 @@ export default function MirrorPage() {
       setLikedPosts((prev) => new Set(prev).add(variables.postId));
     },
     onSuccess: () => {
-      // Refetch para sincronizar com backend
-      setTimeout(() => feedQuery.refetch(), 500);
+      // Refetch para sincronizar com backend após delay
+      setTimeout(() => feedQuery.refetch(), 800);
     },
     onError: (err) => {
+      console.error("Like error:", err);
       toast.error("Erro ao dar like: " + err.message);
       // Refetch para reverter otimistic update
-      feedQuery.refetch();
+      setTimeout(() => feedQuery.refetch(), 300);
     },
   });
 
@@ -107,13 +109,14 @@ export default function MirrorPage() {
       });
     },
     onSuccess: () => {
-      // Refetch para sincronizar com backend
-      setTimeout(() => feedQuery.refetch(), 500);
+      // Refetch para sincronizar com backend após delay
+      setTimeout(() => feedQuery.refetch(), 800);
     },
     onError: (err) => {
+      console.error("Unlike error:", err);
       toast.error("Erro ao remover like: " + err.message);
       // Refetch para reverter otimistic update
-      feedQuery.refetch();
+      setTimeout(() => feedQuery.refetch(), 300);
     },
   });
 
@@ -136,11 +139,12 @@ export default function MirrorPage() {
     },
     onSuccess: () => {
       toast.success("Post deletado!");
-      feedQuery.refetch();
+      setTimeout(() => feedQuery.refetch(), 500);
     },
     onError: (err) => {
+      console.error("Delete post error:", err);
       toast.error("Erro ao deletar post: " + err.message);
-      feedQuery.refetch();
+      setTimeout(() => feedQuery.refetch(), 500);
     },
   });
 
@@ -176,15 +180,24 @@ export default function MirrorPage() {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("Imagem muito grande! Máximo 5MB");
+      // Check file size (max 100KB for base64 storage)
+      if (file.size > 100 * 1024) {
+        toast.error("Imagem muito grande! Máximo 100KB. Comprima a imagem antes de enviar.");
         return;
       }
 
       const reader = new FileReader();
       reader.onload = (event) => {
-        setSelectedImage(event.target?.result as string);
+        const base64 = event.target?.result as string;
+        // Check base64 size
+        if (base64.length > 150000) {
+          toast.error("Imagem muito grande após conversão! Comprima a imagem.");
+          return;
+        }
+        setSelectedImage(base64);
+      };
+      reader.onerror = () => {
+        toast.error("Erro ao ler imagem");
       };
       reader.readAsDataURL(file);
     }

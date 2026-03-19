@@ -8,12 +8,13 @@ describe("Grupos de Mensagens", () => {
   let groupId: number;
 
   beforeAll(async () => {
-    // Create three test students
+    // Create three test students with unique IDs
+    const timestamp = Date.now();
     const result1 = await db.createStudent({
-      studentId: "TKW-2026-GRP-001",
-      username: "group_test_user1",
+      studentId: `TKW-2026-GRP-${timestamp}-1`,
+      username: `group_test_user1_${timestamp}`,
       fullName: "Group Test User 1",
-      email: "grp1@test.com",
+      email: `grp1_${timestamp}@test.com`,
       passwordHash: "hashed_password",
       grade: 1,
       district: 1,
@@ -21,10 +22,10 @@ describe("Grupos de Mensagens", () => {
     student1Id = result1.id;
 
     const result2 = await db.createStudent({
-      studentId: "TKW-2026-GRP-002",
-      username: "group_test_user2",
+      studentId: `TKW-2026-GRP-${timestamp}-2`,
+      username: `group_test_user2_${timestamp}`,
       fullName: "Group Test User 2",
-      email: "grp2@test.com",
+      email: `grp2_${timestamp}@test.com`,
       passwordHash: "hashed_password",
       grade: 1,
       district: 1,
@@ -32,10 +33,10 @@ describe("Grupos de Mensagens", () => {
     student2Id = result2.id;
 
     const result3 = await db.createStudent({
-      studentId: "TKW-2026-GRP-003",
-      username: "group_test_user3",
+      studentId: `TKW-2026-GRP-${timestamp}-3`,
+      username: `group_test_user3_${timestamp}`,
       fullName: "Group Test User 3",
-      email: "grp3@test.com",
+      email: `grp3_${timestamp}@test.com`,
       passwordHash: "hashed_password",
       grade: 1,
       district: 1,

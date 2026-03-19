@@ -6,12 +6,13 @@ describe("Mirror - Rede Social", () => {
   let postId: number;
 
   beforeAll(async () => {
-    // Create a test student
+    // Create a test student with unique ID
+    const timestamp = Date.now();
     const result = await db.createStudent({
-      studentId: "TKW-2026-TEST-001",
-      username: "mirror_test_user",
+      studentId: `TKW-2026-TEST-${timestamp}`,
+      username: `mirror_test_user_${timestamp}`,
       fullName: "Mirror Test User",
-      email: "mirror@test.com",
+      email: `mirror_${timestamp}@test.com`,
       passwordHash: "hashed_password",
       grade: 1,
       district: 1,

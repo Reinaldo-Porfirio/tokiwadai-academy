@@ -7,12 +7,13 @@ describe("Mensagens Privadas", () => {
   let messageId: number;
 
   beforeAll(async () => {
-    // Create two test students
+    // Create two test students with unique IDs
+    const timestamp = Date.now();
     const result1 = await db.createStudent({
-      studentId: "TKW-2026-MSG-001",
-      username: "msg_test_user1",
+      studentId: `TKW-2026-MSG-${timestamp}-1`,
+      username: `msg_test_user1_${timestamp}`,
       fullName: "Message Test User 1",
-      email: "msg1@test.com",
+      email: `msg1_${timestamp}@test.com`,
       passwordHash: "hashed_password",
       grade: 1,
       district: 1,
@@ -20,10 +21,10 @@ describe("Mensagens Privadas", () => {
     student1Id = result1.id;
 
     const result2 = await db.createStudent({
-      studentId: "TKW-2026-MSG-002",
-      username: "msg_test_user2",
+      studentId: `TKW-2026-MSG-${timestamp}-2`,
+      username: `msg_test_user2_${timestamp}`,
       fullName: "Message Test User 2",
-      email: "msg2@test.com",
+      email: `msg2_${timestamp}@test.com`,
       passwordHash: "hashed_password",
       grade: 1,
       district: 1,

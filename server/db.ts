@@ -306,6 +306,9 @@ export async function deleteLike(postId: number, studentId: number) {
     );
 }
 
+// Alias for backward compatibility
+export const removeLike = deleteLike;
+
 export async function getLikeByPostAndStudent(postId: number, studentId: number) {
   const db = await getDb();
   if (!db) return undefined;
@@ -319,6 +322,16 @@ export async function getLikeByPostAndStudent(postId: number, studentId: number)
     .limit(1);
 
   return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getLikesByPostId(postId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(likes)
+    .where(eq(likes.postId, postId));
 }
 
 // ============================================================================
